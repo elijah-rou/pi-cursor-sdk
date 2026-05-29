@@ -9,6 +9,7 @@ import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai
 import { loadContextWindowCache } from "./context-window-cache.js";
 import { loadCursorSdk } from "./cursor-sdk-runtime.js";
 import { resolveCursorApiKey, resolveCursorRuntimeApiKey } from "./cursor-api-key.js";
+import { resolveCursorComposerCostRates } from "./cursor-model-costs.js";
 import { scrubSensitiveText } from "./cursor-sensitive-text.js";
 import {
 	fingerprintApiKey,
@@ -247,13 +248,14 @@ function toMetadata(
 }
 
 function toModelConfig(metadata: CursorModelMetadata, name: string): ProviderModelConfig {
+	const composerCost = resolveCursorComposerCostRates(metadata.piModelId, metadata.defaultFast);
 	return {
 		id: metadata.piModelId,
 		name,
 		reasoning: metadata.supportsReasoning,
 		...(metadata.thinkingLevelMap ? { thinkingLevelMap: metadata.thinkingLevelMap } : {}),
 		input: [...TEXT_AND_IMAGE_INPUT],
-		cost: { ...ZERO_COST },
+		cost: composerCost ?? { ...ZERO_COST },
 		contextWindow: metadata.contextWindow,
 		maxTokens: FALLBACK_MAX_TOKENS,
 	};
