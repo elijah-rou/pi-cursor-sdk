@@ -8,6 +8,7 @@ import {
 	estimateCursorContextTotalTokens,
 	readCursorSdkTurnUsageFromUpdate,
 } from "../src/cursor-usage-accounting.js";
+import { CURSOR_COMPOSER_FAST_COST } from "../src/cursor-model-costs.js";
 import { makeModel } from "./helpers/pi-harness.js";
 
 function makeAssistantMessage(content: AssistantMessage["content"]): AssistantMessage {
@@ -101,5 +102,24 @@ describe("cursor usage accounting", () => {
 		expect(partial.usage.input).toBe(sessionInputTokens);
 		expect(partial.usage.totalTokens).toBe(estimateCursorContextTotalTokens(partial, model, context));
 		expect(partial.usage.totalTokens).toBeGreaterThan(partial.usage.input + partial.usage.output);
+	});
+
+	it("estimates Composer usage cost from Cursor fast API rates", () => {
+		const model = makeModel("composer-2.5");
+		const context: Context = {
+			systemPrompt: "Be helpful.",
+			messages: [{ role: "user", content: "Hello", timestamp: 1 }],
+		};
+		const partial = makeAssistantMessage([{ type: "text", text: "Hello back." }]);
+		partial.model = "composer-2.5";
+
+		applyCursorApproximateUsage(partial, model, context, 1000);
+
+		const expectedInput = (CURSOR_COMPOSER_FAST_COST.input / 1_000_000) * partial.usage.input;
+		const expectedOutput = (CURSOR_COMPOSER_FAST_COST.output / 1_000_000) * partial.usage.output;
+		expect(partial.usage.cost.input).toBeCloseTo(expectedInput, 8);
+		expect(partial.usage.cost.output).toBeCloseTo(expectedOutput, 8);
+		expect(partial.usage.cost.total).toBeCloseTo(expectedInput + expectedOutput, 8);
+		expect(partial.usage.cost.total).toBeGreaterThan(0);
 	});
 });
