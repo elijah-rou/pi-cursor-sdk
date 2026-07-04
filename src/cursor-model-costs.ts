@@ -26,7 +26,11 @@ export type CursorModelCostRates = {
 };
 
 function normalizeCursorModelId(modelId: string): string {
-	return modelId.trim().toLowerCase();
+	return modelId
+		.trim()
+		.toLowerCase()
+		.replace(/:(?:fast|slow)$/, "")
+		.replace(/@[^@]+$/, "");
 }
 
 function isComposerFamilyModel(modelId: string): boolean {
@@ -34,9 +38,16 @@ function isComposerFamilyModel(modelId: string): boolean {
 	return normalized === "composer" || normalized.startsWith("composer-") || normalized === "composer-latest";
 }
 
+function parseFastOverrideFromModelId(modelId: string): boolean | undefined {
+	const normalized = modelId.trim().toLowerCase();
+	if (normalized.endsWith(":slow")) return false;
+	if (normalized.endsWith(":fast")) return true;
+	return undefined;
+}
+
 export function resolveCursorComposerCostRates(modelId: string, fastEnabled?: boolean): CursorModelCostRates | undefined {
 	if (!isComposerFamilyModel(modelId)) return undefined;
-	const useFast = fastEnabled ?? getEffectiveFastForModelId(modelId) ?? true;
+	const useFast = fastEnabled ?? getEffectiveFastForModelId(modelId) ?? parseFastOverrideFromModelId(modelId) ?? true;
 	return useFast ? { ...CURSOR_COMPOSER_FAST_COST } : { ...CURSOR_COMPOSER_STANDARD_COST };
 }
 
