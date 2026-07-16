@@ -1,4 +1,5 @@
 import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai/compat";
+import { applyCursorComposerUsageCost } from "./cursor-model-costs.js";
 import {
 	CURSOR_APPROX_CHARS_PER_TOKEN,
 	CURSOR_IMAGE_TOKEN_ESTIMATE,
@@ -111,6 +112,7 @@ export function applyCursorApproximateUsage(partial: AssistantMessage, model: Mo
 		partial.usage.input + partial.usage.output,
 		estimateCursorContextTotalTokens(partial, model, context),
 	);
+	applyCursorComposerUsageCost(partial, model);
 }
 
 export function applyCursorUsage(
@@ -123,7 +125,8 @@ export function applyCursorUsage(
 	const usage = sdkUsage?.turn;
 	if (usage && isCursorSdkUsageSafeForPiMessage(usage, model)) {
 		applyCursorSdkUsage(partial, usage);
-		return;
+	} else {
+		applyCursorApproximateUsage(partial, model, context, sessionInputTokens);
 	}
-	applyCursorApproximateUsage(partial, model, context, sessionInputTokens);
+	applyCursorComposerUsageCost(partial, model);
 }
